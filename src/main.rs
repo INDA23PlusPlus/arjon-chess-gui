@@ -5,7 +5,6 @@ use jonathan_hallstrom_chess::{Board, Color, Move};
 use mint::{Point2, Vector2};
 use std::cmp::min;
 use std::collections::HashMap;
-use std::path::Path;
 
 #[derive(Eq, PartialEq, Copy, Clone, Hash)]
 enum Square {
@@ -135,7 +134,7 @@ impl Game {
             legal_moves,
             selected_from: None,
             selected_to: None,
-            pieces_image: graphics::Image::from_path(ctx, Path::new("/Pieces.png")).unwrap(),
+            pieces_image: graphics::Image::from_bytes(ctx, include_bytes!("Pieces.png")).unwrap(),
         }
     }
 }
