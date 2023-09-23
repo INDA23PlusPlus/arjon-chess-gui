@@ -89,19 +89,30 @@ fn parse_move(mv: &str) -> ((usize, usize), (usize, usize)) {
     )
 }
 
-fn parse_moves(moves: Vec<Move>) -> [[HashMap<(usize, usize), Move>; 8]; 8] {
-    let mut parsed: [[HashMap<(usize, usize), Move>; 8]; 8] = Default::default();
+fn parse_moves(moves: Vec<Move>) -> [[HashMap<(usize, usize), Vec<Move>>; 8]; 8] {
+    let mut parsed: [[HashMap<(usize, usize), Vec<Move>>; 8]; 8] = Default::default();
 
     for mv in moves {
         let (from, to) = parse_move(&mv.to_algebraic_notation());
-        parsed[from.0][from.1].insert(to, mv);
+        parsed[from.0][from.1]
+            .entry(to)
+            .or_insert_with(Vec::new)
+            .push(mv);
     }
     parsed
+}
+
+enum PromotablePieces {
+    Queen,
+    Knight,
+    Bishop,
+    Rook,
+    NA,
 }
 struct Game {
     board: Board,
     squares: [[Square; 8]; 8],
-    legal_moves: [[HashMap<(usize, usize), Move>; 8]; 8],
+    legal_moves: [[HashMap<(usize, usize), Vec<Move>>; 8]; 8],
     selected_from: Option<(usize, usize)>,
     selected_to: Option<(usize, usize)>,
     pieces_image: graphics::Image,
@@ -152,6 +163,8 @@ impl event::EventHandler for Game {
                     color,
                 )?;
                 canvas.draw(&rect, graphics::DrawParam::default());
+
+                // Draw piece on current square
                 if self.squares[row][col] != Square::Empty {
                     let piece = &self.squares[row][col];
                     let color = piece.color().unwrap();
@@ -193,7 +206,58 @@ impl event::EventHandler for Game {
             }
         }
 
-        if let Some((row, col)) = self.selected_from {
+        // Draw selection for promotion
+        if let Some((row, col)) = self.selected_to {
+            // Grey out the arena
+            let greyed = graphics::Color::new(0.0, 0.0, 0.0, 0.75);
+            let rect = graphics::Mesh::new_rectangle(
+                ctx,
+                graphics::DrawMode::fill(),
+                graphics::Rect::new_i32(0, 0, 800, 800),
+                greyed,
+            )?;
+            canvas.draw(&rect, graphics::DrawParam::default());
+            let dir = match row {
+                7 => -1isize,
+                0 => 1isize,
+                _ => panic!("Promotion not on last row"),
+            };
+
+            let (from_row, from_col) = self.selected_from.unwrap();
+
+            let color = self.squares[from_row][from_col].color().unwrap();
+
+            for dy in 0..4 {
+                let rect = graphics::Rect::new(
+                    (1.0 + dy as f32) / 6.0,
+                    match color {
+                        Color::White => 0.0,
+                        Color::Black => 1.0,
+                    } / 2.0,
+                    1.0 / 6.0,
+                    1.0 / 2.0,
+                );
+                canvas.draw(
+                    &self.pieces_image,
+                    graphics::DrawParam {
+                        src: rect,
+                        color: graphics::Color::WHITE,
+                        transform: Transform::Values {
+                            dest: Point2 {
+                                x: (col * 100) as f32,
+                                y: ((row as isize + dy * dir) * 100) as f32,
+                            },
+                            rotation: 0.0,
+                            scale: Vector2 { x: 1.0, y: 1.0 },
+                            offset: Point2 { x: 0.0, y: 0.0 },
+                        },
+                        z: 0,
+                    },
+                );
+            }
+        }
+        // Draw available moves
+        else if let Some((row, col)) = self.selected_from {
             let color = graphics::Color::new(0.0, 0.5, 0.0, 0.75);
             let rect = graphics::Mesh::new_rectangle(
                 ctx,
@@ -219,8 +283,6 @@ impl event::EventHandler for Game {
             }
         }
 
-        // Draw pieces based on FEN or board state
-        // You can use images or Unicode symbols as needed
         canvas.finish(ctx)
     }
 
@@ -239,14 +301,43 @@ impl event::EventHandler for Game {
 
         let cords = Some((row, col));
 
-        if self.selected_from.is_some()
+        if self.selected_to.is_some() {
+            if col == self.selected_to.as_ref().unwrap().1
+                && ((self.selected_to.as_ref().unwrap().0 == 0 && row < 4)
+                    || (self.selected_to.as_ref().unwrap().0 == 7 && row >= 4))
+            {
+                let drow =
+                    (self.selected_to.as_ref().unwrap().0 as isize - row as isize).abs() as usize;
+                let promotion_piece = match drow {
+                    0 => jonathan_hallstrom_chess::PieceType::Queen,
+                    1 => jonathan_hallstrom_chess::PieceType::Bishop,
+                    2 => jonathan_hallstrom_chess::PieceType::Knight,
+                    3 => jonathan_hallstrom_chess::PieceType::Rook,
+                    _ => panic!("Couldn't select a promotion piece."),
+                };
+                let mut move_made = false;
+                for mv in &self.legal_moves[prev_row][prev_col][self.selected_to.as_ref().unwrap()]
+                {
+                    if mv.get_promoted_type().unwrap() == promotion_piece {
+                        move_made = true;
+                        self.board.play_move(*mv).unwrap();
+                        break;
+                    }
+                }
+                assert!(move_made);
+                self.refresh_board();
+            } else {
+                self.selected_to = None;
+                self.selected_from = None;
+            }
+        } else if self.selected_from.is_some()
             && self.legal_moves[prev_row][prev_col].contains_key(cords.as_ref().unwrap())
         {
-            let mv = &self.legal_moves[prev_row][prev_col][cords.as_ref().unwrap()];
-            if mv.is_promotion() {
+            let moves = &self.legal_moves[prev_row][prev_col][cords.as_ref().unwrap()];
+            if moves.len() > 1 {
                 self.selected_to = cords.clone();
             } else {
-                self.board.play_move(*mv).unwrap();
+                self.board.play_move(moves[0]).unwrap();
                 self.refresh_board();
             }
         } else if self.squares[row][col]
