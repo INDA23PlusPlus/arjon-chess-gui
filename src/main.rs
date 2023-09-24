@@ -38,6 +38,11 @@ lazy_static! {
     };
 }
 
+const COL_COUNT_F32: f32 = 8.0;
+const ROW_COUNT_F32: f32 = 8.0;
+const HIGHLIGHT_COLOR: graphics::Color = graphics::Color::new(0.0, 0.5, 0.0, 0.75);
+const DARK_FILM_COLOR: graphics::Color = graphics::Color::new(0.0, 0.0, 0.0, 0.75);
+
 #[derive(Eq, PartialEq, Copy, Clone, Hash)]
 enum Square {
     Empty,
@@ -173,27 +178,31 @@ impl Game {
             promotion_mesh: Mesh::new_rectangle(
                 ctx,
                 DrawMode::fill(),
-                Rect::new(0.0, 0.0, 1.0, 1.0),
-                graphics::Color::new(0.0f32, 0.0f32, 0.0f32, 0.75f32),
+                Rect::one(),
+                DARK_FILM_COLOR,
             )
             .unwrap(),
             selected_piece_mesh: Mesh::new_rectangle(
                 ctx,
                 DrawMode::fill(),
-                Rect::new(0.0f32, 0.0f32, 1.0f32 / 8.0f32, 1.0f32 / 8.0f32),
-                graphics::Color::new(0.0f32, 0.5f32, 0.0f32, 0.75f32),
+                {
+                    let mut rect = Rect::one();
+                    rect.scale(1.0 / COL_COUNT_F32, 1.0 / ROW_COUNT_F32);
+                    rect
+                },
+                HIGHLIGHT_COLOR,
             )
             .unwrap(),
             available_move_mesh: Mesh::new_circle(
                 ctx,
                 DrawMode::fill(),
                 Point2 {
-                    x: 0.5f32 / 8.0f32,
-                    y: 0.5f32 / 8.0f32,
+                    x: 0.5f32 / COL_COUNT_F32,
+                    y: 0.5f32 / ROW_COUNT_F32,
                 },
-                0.25f32 / 8.0f32,
-                0.25f32 / (8.0f32 * 1024.0f32),
-                graphics::Color::new(0.0, 0.5, 0.0, 0.75),
+                0.25f32 / COL_COUNT_F32,
+                0.25f32 / (COL_COUNT_F32 * 1024.0f32),
+                HIGHLIGHT_COLOR,
             )
             .unwrap(),
         }
@@ -343,20 +352,25 @@ impl event::EventHandler for Game {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
+        // Start with a white canvas the size of the program window
         let mut canvas = Canvas::from_frame(ctx, graphics::Color::WHITE);
 
+        // Draw chessboard pattern
         self.draw_squares(&mut canvas);
+
+        // Draw pieces
         self.draw_pieces(&mut canvas);
 
-        // Draw selection for promotion
+        // Draw selection for promotion if promoting move is selected
         if let Some((row, col)) = self.selected_to {
             self.draw_promotion_selection(&mut canvas, row, col);
         }
-        // Draw available moves
+        // Else draw available moves if piece is selected
         else if let Some((row, col)) = self.selected_from {
             self.draw_move_selection(&mut canvas, row, col);
         }
 
+        // Submit drawing
         canvas.finish(ctx)
     }
 
@@ -430,7 +444,7 @@ impl event::EventHandler for Game {
 
 fn main() -> GameResult {
     let ws = WindowSetup {
-        title: "Chess".to_owned(),
+        title: "Arvid Jonassons Chess GUI".to_owned(),
         samples: NumSamples::One,
         vsync: true,
         icon: "".to_string(),
