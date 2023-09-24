@@ -14,8 +14,6 @@ static PIECES_IMAGE_BYTES: &'static [u8] = include_bytes!("Pieces.png");
 lazy_static! {
     static ref CHESSBOARD_MESH: graphics::MeshBuilder = {
         let mut mesh = graphics::MeshBuilder::new();
-        let white = graphics::Color::new(1.0, 0.9, 0.9, 1.0);
-        let black = graphics::Color::new(0.9, 0.7, 0.7, 1.0);
         for row in 0..8usize {
             for col in 0..8usize {
                 mesh.rectangle(
@@ -27,8 +25,8 @@ lazy_static! {
                         1.0f32 / 8.0f32,
                     ),
                     match (row + col) % 2 == 0 {
-                        true => white,
-                        false => black,
+                        true => WHITE_SQUARE_COLOR,
+                        false => BLACK_SQUARE_COLOR,
                     },
                 )
                 .unwrap();
@@ -42,6 +40,8 @@ const COL_COUNT_F32: f32 = 8.0;
 const ROW_COUNT_F32: f32 = 8.0;
 const HIGHLIGHT_COLOR: graphics::Color = graphics::Color::new(0.0, 0.5, 0.0, 0.75);
 const DARK_FILM_COLOR: graphics::Color = graphics::Color::new(0.0, 0.0, 0.0, 0.75);
+const BLACK_SQUARE_COLOR: graphics::Color = graphics::Color::new(0.9, 0.7, 0.7, 1.0);
+const WHITE_SQUARE_COLOR: graphics::Color = graphics::Color::new(1.0, 0.9, 0.9, 1.0);
 
 #[derive(Eq, PartialEq, Copy, Clone, Hash)]
 enum Square {
