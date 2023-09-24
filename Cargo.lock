@@ -384,6 +384,7 @@ version = "0.1.0"
 dependencies = [
  "ggez",
  "jonathan_hallstrom_chess",
+ "lazy_static",
  "mint",
 ]
 
