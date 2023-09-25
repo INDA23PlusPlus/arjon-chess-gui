@@ -1,5 +1,6 @@
 use ggez::conf::{FullscreenType, NumSamples, WindowMode, WindowSetup};
 use ggez::graphics::{Canvas, DrawMode, Image, Mesh, Rect, Transform};
+use ggez::winit::dpi::{LogicalSize, PhysicalSize};
 use ggez::{event, graphics, Context, GameResult};
 use jonathan_hallstrom_chess::{Board, Color, Move};
 use mint::{Point2, Vector2};
@@ -376,14 +377,15 @@ impl event::EventHandler for Game {
 
     fn mouse_button_down_event(
         &mut self,
-        _ctx: &mut Context,
+        ctx: &mut Context,
         _button: event::MouseButton,
         x: f32,
         y: f32,
     ) -> GameResult {
+        let (width, height) = ctx.gfx.drawable_size();
         // Coerce in the range 0..=7 in case mouse pointer registers outside normal range
-        let row = min((y / 100.0).abs() as usize, 7usize);
-        let col = min((x / 100.0).abs() as usize, 7usize);
+        let row = min((y * ROW_COUNT_F32 / height).abs() as usize, 7usize);
+        let col = min((x * COL_COUNT_F32 / width).abs() as usize, 7usize);
 
         let (prev_row, prev_col) = self.selected_from.unwrap_or((0usize, 0usize));
 
@@ -461,11 +463,11 @@ fn main() -> GameResult {
         max_width: 0.0,
         min_height: 1.0,
         max_height: 0.0,
-        resizable: false,
+        resizable: true,
         visible: true,
         transparent: false,
         resize_on_scale_factor_change: false,
-        logical_size: None,
+        logical_size: Some(LogicalSize::new(800.0, 800.0)),
     };
 
     let cb = ggez::ContextBuilder::new("Chess GUI", "Arvid Jonasson")
