@@ -13,3 +13,6 @@ jonathan_hallstrom_chess = { git = "https://github.com/INDA23PlusPlus/johalls-ch
 ggez = "0.9.3"
 mint = "0.5.9"
 lazy_static = "1.4.0"
+chess-network-protocol = { git = "https://github.com/INDA23PlusPlus/chess-network-protocol" }
+serde = "1.0.188"
+serde_json = "1.0.107"
